@@ -16,24 +16,23 @@ import java.lang.String;
 import java.net.SocketAddress;
 import java.util.List;
 
+
 public class EchoServer {
     //Client List
-    ArrayList<AsynchronousSocketChannel> list = new ArrayList<>();
+    public ArrayList<AsynchronousSocketChannel> list = new ArrayList<>();
 
     //IP List
     private List<SocketAddress>ips = new ArrayList<SocketAddress>();
 
     //create a socket channel and bind to local bind address
     AsynchronousServerSocketChannel serverSock;// =  AsynchronousServerSocketChannel.open().bind(sockAddr);
-
+    AsynchronousServerSocketChannel serverSockMain;
     public EchoServer( String bindAddr, int bindPort ) throws IOException {
-        InetSocketAddress sockAddr = new InetSocketAddress(bindAddr, bindPort);
-        
-        serverSock =  AsynchronousServerSocketChannel.open().bind(sockAddr);
-        
+        serverSock =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, bindPort));
+        serverSockMain =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, 19029));   
+
        //start to accept the connection from client
         serverSock.accept(serverSock, new CompletionHandler<AsynchronousSocketChannel,AsynchronousServerSocketChannel >() {
-
             @Override
             public void completed(AsynchronousSocketChannel sockChannel, AsynchronousServerSocketChannel serverSock ) {
                 //a connection is accepted, start to accept next connection
@@ -59,7 +58,36 @@ public class EchoServer {
             public void failed(Throwable exc, AsynchronousServerSocketChannel serverSock) {
                 System.out.println( "fail to accept a connection");
             }
-            
+        } );
+
+       //start to accept the connection from client
+        serverSockMain.accept(serverSockMain, new CompletionHandler<AsynchronousSocketChannel,AsynchronousServerSocketChannel >() {
+
+            @Override
+            public void completed(AsynchronousSocketChannel sockChannel, AsynchronousServerSocketChannel serverSockMain ) {
+                //a connection is accepted, start to accept next connection
+                serverSockMain.accept( serverSockMain, this );
+
+                //Print IP Address
+                try{
+                    System.out.println( sockChannel.getLocalAddress());
+                }catch(IOException e) {
+
+                    e.printStackTrace();
+                }
+
+                //Add To Client List
+                list.add(list.size(), sockChannel);
+
+                //start to read message from the client
+                startRead( sockChannel );
+                
+            }
+
+            @Override
+            public void failed(Throwable exc, AsynchronousServerSocketChannel serverSockMain) {
+                System.out.println( "fail to accept a connection");
+            }
         } );
         
     }
@@ -90,7 +118,7 @@ public class EchoServer {
 
                 //Print Message
                 String msg = getString(buf);
-                System.out.println("client:" + buf + " " + msg + "   " );
+                System.out.print("client:" + buf + " " + msg + "   " );
 
                 //Send To All Client
                 for(int i = 0; i < list.size(); i++){
@@ -117,7 +145,7 @@ public class EchoServer {
             }
         });
     }
-    
+        
     private void startWrite( final AsynchronousSocketChannel sockChannel, final String message) {
         ByteBuffer buf = ByteBuffer.allocate(2048);
         buf.put(message.getBytes());
@@ -135,11 +163,10 @@ public class EchoServer {
             }
         });
     }
-     
     public static void main( String[] args ) {
         try {
             new EchoServer( "0.0.0.0", 3575 );
-            new EchoServer( "0.0.0.0", 19029 );
+            //new EchoServer( "0.0.0.0", 19029 );
 
             for(;;){
                 Thread.sleep(10*1000);
@@ -147,7 +174,10 @@ public class EchoServer {
         } catch (Exception ex) {
             Logger.getLogger(EchoServer.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }
+    } 
 }
+
+
+
 
 
