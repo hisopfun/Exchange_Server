@@ -17,20 +17,23 @@ import java.net.SocketAddress;
 import java.util.List;
 
 
-public class BroadcastServer {
-    //Client List !!!!!!if client is close, must delete channel
-    public ArrayList<AsynchronousSocketChannel> list = new ArrayList<>();
+public class MatchServer {
+    //Client List
+    //public ArrayList<AsynchronousSocketChannel> list = new ArrayList<>();
 
     //IP List
     private List<SocketAddress>ips = new ArrayList<SocketAddress>();
+
+    //Destination client
+    AsynchronousSocketChannel clientChannel;
 
     //create a socket channel and bind to local bind address
     AsynchronousServerSocketChannel serverSock;// =  AsynchronousServerSocketChannel.open().bind(sockAddr);
     AsynchronousServerSocketChannel serverSockMain;
 
-    public BroadcastServer( String bindAddr, int bindPort ) throws IOException {
+    public MatchServer( String bindAddr, int bindPort ) throws IOException {
         serverSock =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, bindPort));
-        serverSockMain =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, 19029));   
+        serverSockMain =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress("127.0.0.1", 19030));   
 
        //start to accept the connection from client
         serverSock.accept(serverSock, new CompletionHandler<AsynchronousSocketChannel,AsynchronousServerSocketChannel >() {
@@ -45,7 +48,7 @@ public class BroadcastServer {
                     System.out.println( sockChannel.getLocalAddress().toString());
 
                     //Add To Client List
-                    list.add(list.size(), sockChannel);
+                    //list.add(list.size(), sockChannel);
 
                 }catch(IOException e) {
                     e.printStackTrace();
@@ -73,6 +76,7 @@ public class BroadcastServer {
                 //Print IP Address
                 try{
                     System.out.println( sockChannel.getLocalAddress());
+                    clientChannel = sockChannel;
                 }catch(IOException e) {
 
                     e.printStackTrace();
@@ -122,17 +126,12 @@ public class BroadcastServer {
                 System.out.print(buf.limit() + " client:" + buf + " " + msg + "   " );
 
                 try{
-                    //Send To All Client
-                    if (channel.getLocalAddress().toString().contains("19029")){
-                        for(int i = 0; i < list.size(); i++){
-                            startWrite(list.get(i), msg);
-                        }
-                    }
+                    //Send To 
+                    startWrite(clientChannel, msg);
 
                     //Print IPAdress
                     System.out.println( channel.getRemoteAddress().toString());
                 }catch(IOException e) {
-
                     e.printStackTrace();
                 }
                 // echo the message
@@ -168,19 +167,13 @@ public class BroadcastServer {
     }
     public static void main( String[] args ) {
         try {
-            new BroadcastServer( "0.0.0.0", 3575 );
-            //new BroadcastServer( "0.0.0.0", 19029 );
+            new MatchServer( "0.0.0.0", 3576 );
 
             for(;;){
                 Thread.sleep(10*1000);
             }
         } catch (Exception ex) {
-            Logger.getLogger(BroadcastServer.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(MatchServer.class.getName()).log(Level.SEVERE, null, ex);
         }
     } 
 }
-
-
-
-
-
