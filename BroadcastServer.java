@@ -17,7 +17,7 @@ import java.net.SocketAddress;
 import java.util.List;
 
 
-public class EchoServer {
+public class BroadcastServer {
     //Client List
     public ArrayList<AsynchronousSocketChannel> list = new ArrayList<>();
 
@@ -28,7 +28,7 @@ public class EchoServer {
     AsynchronousServerSocketChannel serverSock;// =  AsynchronousServerSocketChannel.open().bind(sockAddr);
     AsynchronousServerSocketChannel serverSockMain;
 
-    public EchoServer( String bindAddr, int bindPort ) throws IOException {
+    public BroadcastServer( String bindAddr, int bindPort ) throws IOException {
         serverSock =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, bindPort));
         serverSockMain =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, 19029));   
 
@@ -39,7 +39,7 @@ public class EchoServer {
                 
                 //a connection is accepted, start to accept next connection
                 serverSock.accept( serverSock, this );
-                
+
                 try{
                     //Print IP Address
                     System.out.println( sockChannel.getLocalAddress().toString());
@@ -168,14 +168,14 @@ public class EchoServer {
     }
     public static void main( String[] args ) {
         try {
-            new EchoServer( "0.0.0.0", 3575 );
-            //new EchoServer( "0.0.0.0", 19029 );
+            new BroadcastServer( "0.0.0.0", 3575 );
+            //new BroadcastServer( "0.0.0.0", 19029 );
 
             for(;;){
                 Thread.sleep(10*1000);
             }
         } catch (Exception ex) {
-            Logger.getLogger(EchoServer.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(BroadcastServer.class.getName()).log(Level.SEVERE, null, ex);
         }
     } 
 }
