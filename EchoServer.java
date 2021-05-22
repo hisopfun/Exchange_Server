@@ -27,6 +27,7 @@ public class EchoServer {
     //create a socket channel and bind to local bind address
     AsynchronousServerSocketChannel serverSock;// =  AsynchronousServerSocketChannel.open().bind(sockAddr);
     AsynchronousServerSocketChannel serverSockMain;
+
     public EchoServer( String bindAddr, int bindPort ) throws IOException {
         serverSock =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, bindPort));
         serverSockMain =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, 19029));   
@@ -35,19 +36,20 @@ public class EchoServer {
         serverSock.accept(serverSock, new CompletionHandler<AsynchronousSocketChannel,AsynchronousServerSocketChannel >() {
             @Override
             public void completed(AsynchronousSocketChannel sockChannel, AsynchronousServerSocketChannel serverSock ) {
+                
                 //a connection is accepted, start to accept next connection
                 serverSock.accept( serverSock, this );
-
-                //Print IP Address
+                
                 try{
-                    System.out.println( sockChannel.getLocalAddress());
-                }catch(IOException e) {
+                    //Print IP Address
+                    System.out.println( sockChannel.getLocalAddress().toString());
 
+                    //Add To Client List
+                    list.add(list.size(), sockChannel);
+
+                }catch(IOException e) {
                     e.printStackTrace();
                 }
-
-                //Add To Client List
-                list.add(list.size(), sockChannel);
 
                 //start to read message from the client
                 startRead( sockChannel );
@@ -77,7 +79,7 @@ public class EchoServer {
                 }
 
                 //Add To Client List
-                list.add(list.size(), sockChannel);
+                //list.add(list.size(), sockChannel);
 
                 //start to read message from the client
                 startRead( sockChannel );
@@ -94,7 +96,6 @@ public class EchoServer {
 
 
     private static String getString(ByteBuffer buf){
-        buf.flip();
         byte[] bytes = new byte[buf.remaining()]; // create a byte array the length of the number of bytes written to the buffer
         buf.get(bytes); // read the bytes that were written
         String packet = new String(bytes);
@@ -112,22 +113,24 @@ public class EchoServer {
              */
             @Override
             public void completed(Integer result, AsynchronousSocketChannel channel  ) {
-
-                //if client close ,return
+                //if client is close ,return
+                buf.flip();
                 if (buf.limit() == 0) return;
 
                 //Print Message
                 String msg = getString(buf);
-                System.out.print("client:" + buf + " " + msg + "   " );
+                System.out.print(buf.limit() + " client:" + buf + " " + msg + "   " );
 
-                //Send To All Client
-                for(int i = 0; i < list.size(); i++){
-                    startWrite(list.get(i), msg);
-                }
-
-                //Print IPAdress
                 try{
-                    System.out.println( channel.getRemoteAddress());
+                    //Send To All Client
+                    if (channel.getLocalAddress().toString().contains("19029")){
+                        for(int i = 0; i < list.size(); i++){
+                            startWrite(list.get(i), msg);
+                        }
+                    }
+
+                    //Print IPAdress
+                    System.out.println( channel.getRemoteAddress().toString());
                 }catch(IOException e) {
 
                     e.printStackTrace();
