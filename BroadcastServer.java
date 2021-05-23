@@ -15,7 +15,11 @@ import java.lang.String;
 //import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.util.List;
-
+import java.text.DateFormat;
+import java.util.Date;
+import java.util.TimeZone;
+import java.util.Calendar;
+import java.text.SimpleDateFormat;
 
 public class BroadcastServer {
     //Client List !!!!!!if client is close, must delete channel
@@ -113,28 +117,38 @@ public class BroadcastServer {
              */
             @Override
             public void completed(Integer result, AsynchronousSocketChannel channel  ) {
-                //if client is close ,return
+
+                //ipaddress
+                String ipAdr = "";
+                try{
+
+                    //Print IPAdress
+                    ipAdr = channel.getRemoteAddress().toString();
+                    System.out.println(ipAdr);
+                }catch(IOException e) {
+                    e.printStackTrace();
+                }
+
                 buf.flip();
+                //if client is close ,return
                 if (buf.limit() == 0) return;
 
                 //Print Message
                 String msg = getString(buf);
-                System.out.print(buf.limit() + " client:" + buf + " " + msg + "   " );
 
-                try{
-                    //Send To All Client
-                    if (channel.getLocalAddress().toString().contains("19029")){
-                        for(int i = 0; i < list.size(); i++){
-                            startWrite(list.get(i), msg);
-                        }
+                //time
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
+                sdf.setTimeZone(TimeZone.getTimeZone("Asia/Taipei"));
+                System.out.println(sdf.format(new Date()) + " " + buf.limit() + " client: " + ipAdr + " " + msg + "   " );
+
+
+                //Send To All Client
+                if (ipAdr.contains("19029")){
+                    for(int i = 0; i < list.size(); i++){
+                        startWrite(list.get(i), msg);
                     }
-
-                    //Print IPAdress
-                    System.out.println( channel.getRemoteAddress().toString());
-                }catch(IOException e) {
-
-                    e.printStackTrace();
                 }
+
                 // echo the message
                 //startWrite( channel, buf );
                 
@@ -179,8 +193,3 @@ public class BroadcastServer {
         }
     } 
 }
-
-
-
-
-

@@ -10,6 +10,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import java.text.DateFormat;
+import java.util.Date;
+import java.util.TimeZone;
+import java.util.Calendar;
+import java.text.SimpleDateFormat;
 /**
  *
  * @author Steven
@@ -73,7 +78,10 @@ public class  ConnectTOBroadcast{
                 messageRead.getAndIncrement();
                 
                 //print the message
-                System.out.println( "Read message:" + new String( buf.array()) );
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
+                sdf.setTimeZone(TimeZone.getTimeZone("Asia/Taipei"));
+
+                System.out.println(sdf.format(new Date()) + " Read message:" + new String( buf.array()) );
 
                 startWrite( sockChannelToBroadcast,  new String( buf.array())  );
                 startRead( sockChannel );
