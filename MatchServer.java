@@ -29,6 +29,8 @@ public class MatchServer {
         String time;
         String stockNo;
         String BS;
+        float bid;
+        float ask;
         float price;
         int qty;
         String ipAdr;
@@ -49,6 +51,7 @@ public class MatchServer {
     ArrayList<order> match = new ArrayList<order>();
     ArrayList<order> bid = new ArrayList<order>();
     ArrayList<order> ask = new ArrayList<order>();
+    ArrayList<order> allOrder = new ArrayList<order>();
     AtomicInteger ordTime = new AtomicInteger( 0 );
 
     //Client List
@@ -66,7 +69,7 @@ public class MatchServer {
 
     public MatchServer( String bindAddr, int bindPort ) throws IOException {
         serverSock =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, bindPort));
-        serverSockMain =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress("127.0.0.1", 19030));   
+        serverSockMain =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress("0.0.0.0", 19030));   
 
        //start to accept the connection from client
         serverSock.accept(serverSock, new CompletionHandler<AsynchronousSocketChannel,AsynchronousServerSocketChannel >() {
@@ -154,113 +157,112 @@ public class MatchServer {
     private void limit(order ord, ArrayList<order> lim){
         //B
         if (ord.BS.equals("B")){
-            System.out.println("ord:" + ord.BS + " " + ord.qty + " " + ord.price);
+            System.out.println("ord:" + ord.BS + " " + ord.qty + " " + ord.price + " " +  ord.sequence);
             for(int i = 0; i < lim.size(); i++){
                 if (ord.price > lim.get(i).price){
                     lim.add(i, ord);
+                    reportClient(i, lim, "Ord report:" + ord.sysTime + "," + ord.stockNo+","+
+                        ord.BS+","+ord.qty+","+ord.price);
                     break;
                 }
+
                 if (lim.size()-1 == i){
-                    lim.add(i, ord);
+                    lim.add(ord);
+                    reportClient(i, lim, "Ord report:" + ord.sysTime + "," + ord.stockNo+","+
+                        ord.BS+","+ord.qty+","+ord.price);
                     break;
                 }
             }
-            if (lim.size() == 0)    lim.add(ord);
+            if (lim.size() == 0)    {
+                lim.add(ord);
+                reportClient(0, lim, "Ord report:" + ord.sysTime + "," + ord.stockNo+","+
+                        ord.BS+","+ord.qty+","+ord.price);
+            }
         }
 
         //S
         if (ord.BS.equals("S")){
-            System.out.println("ord:" + ord.BS + " " + ord.qty + " " + ord.price);
+            System.out.println("ord:" + ord.BS + " " + ord.qty + " " + ord.price + " " + ord.sequence);
             for(int i = 0; i < lim.size(); i++){
-                if (ord.price <= lim.get(i).price){
+                if (ord.price < lim.get(i).price){
                     lim.add(i, ord);
+                    reportClient(i, lim, "Ord report:" + ord.sysTime + "," + ord.stockNo+","+
+                        ord.BS+","+ord.qty+","+ord.price);
                     break;
                 }
+
                 if (lim.size()-1 == i){
-                    lim.add(i, ord);
+                    lim.add(ord);
+                    reportClient(i, lim, "Ord report:" + ord.sysTime + "," + ord.stockNo+","+
+                        ord.BS+","+ord.qty+","+ord.price);
                     break;
                 }
             }
-            if (lim.size() == 0)    lim.add(ord);
+            if (lim.size() == 0) {
+              lim.add(ord);
+                reportClient(0, lim, "Ord report:" + ord.sysTime + "," + ord.stockNo+","+
+                        ord.BS+","+ord.qty+","+ord.price);
+            }
         }
 
+        allOrder.add(ord);
         //Print
         //System.out.println("limit:" + ord.BS + " " + ord.qty + " " + ord.price);
         for(int i = 0; i < lim.size(); i++) 
             System.out.println(lim.get(i).BS + lim.get(i).price);
+
+    }
+
+    private void removeLim(ArrayList<order> lim, int n){
+        reportClient(n, lim, "Del report:" + getSysTime() + "," + lim.get(n).stockNo+","+
+            lim.get(n).BS+","+lim.get(n).qty+","+lim.get(n).price);
+        lim.remove(n);
     }
 
     private boolean trade( ArrayList<order> bid, ArrayList<order> ask, ArrayList<order> mat){
         if (bid.size() == 0 || ask.size() == 0) return false;
+        System.out.println(">>>>>>>>>" + bid.get(0).price+ "," + bid.get(0).sequence + "," + ask.get(0).price+ "," + ask.get(0).sequence + ">>>>>>>>>>>>>>" );
         if (bid.get(0).price > ask.get(0).price){
-            mat.add(new order(bid.get(0).sysTime, "", bid.get(0).stockNo, bid.get(0).BS, bid.get(0).price
-                , bid.get(0).qty, "", 0));
-            reportClient(0, bid, "Mat report:" + bid.get(0).sysTime + "," + bid.get(0).stockNo+","+
-                bid.get(0).BS+","+bid.get(0).qty+","+ask.get(0).price);
-            reportClient(0, ask, "Mat report:" + ask.get(0).sysTime + "," + ask.get(0).stockNo+","+
-                ask.get(0).BS+","+ask.get(0).qty+","+ask.get(0).price);
-            bid.remove(0);
-            ask.remove(0);
+
+            //Buy
+            if (bid.get(0).sequence > ask.get(0).sequence){
+                mat.add(new order(getSysTime(), "", ask.get(0).stockNo, ask.get(0).BS, ask.get(0).price
+                    , 1, "", 0));
+                reportClient(0, bid, "Mat report:" + mat.get(mat.size()-1).sysTime + "," + mat.get(mat.size()-1).stockNo+","+
+                    bid.get(0).BS+","+mat.get(mat.size()-1).qty+","+mat.get(mat.size()-1).price);
+                reportClient(0, ask, "Mat report:" + mat.get(mat.size()-1).sysTime + "," + mat.get(mat.size()-1).stockNo+","+
+                    ask.get(0).BS+","+mat.get(mat.size()-1).qty+","+mat.get(mat.size()-1).price);
+                removeLim(bid, 0);
+                removeLim(ask, 0);
+                return true;
+            //Sell
+            }else if (bid.get(0).sequence < ask.get(0).sequence){
+                mat.add(new order(getSysTime(), "", bid.get(0).stockNo, bid.get(0).BS, bid.get(0).price
+                    , 1, "", 0));
+                reportClient(0, bid, "Mat report:" + mat.get(mat.size()-1).sysTime + "," + mat.get(mat.size()-1).stockNo+","+
+                    bid.get(0).BS+","+mat.get(mat.size()-1).qty+","+mat.get(mat.size()-1).price);
+                reportClient(0, ask, "Mat report:" + mat.get(mat.size()-1).sysTime + "," + mat.get(mat.size()-1).stockNo+","+
+                    ask.get(0).BS+","+mat.get(mat.size()-1).qty+","+mat.get(mat.size()-1).price);
+                removeLim(bid, 0);
+                removeLim(ask, 0);
+                return true;
+            }
         }
 
-        if (bid.get(0).price < ask.get(0).price){
-            mat.add(new order(ask.get(0).sysTime, "", ask.get(0).stockNo, ask.get(0).BS, ask.get(0).price
-                , ask.get(0).qty, "", 0));
-            reportClient(0, bid, "Mat report:" + bid.get(0).sysTime + "," + bid.get(0).stockNo+","+
-                bid.get(0).BS+","+bid.get(0).qty+","+bid.get(0).price);
-            reportClient(0, ask, "Mat report:" + ask.get(0).sysTime + "," + ask.get(0).stockNo+","+
-                ask.get(0).BS+","+ask.get(0).qty+","+bid.get(0).price);
-            bid.remove(0);
-            ask.remove(0);
-        }
+
 
         if (bid.get(0).price == ask.get(0).price){
-            mat.add(new order(ask.get(0).sysTime, "", ask.get(0).stockNo, ask.get(0).BS, ask.get(0).price
+            mat.add(new order(getSysTime(), "", ask.get(0).stockNo, ask.get(0).BS, ask.get(0).price
                 , ask.get(0).qty, "", 0));
-            reportClient(0, bid, "Mat report:" + bid.get(0).sysTime + "," + bid.get(0).stockNo+","+
-                bid.get(0).BS+","+bid.get(0).qty+","+bid.get(0).price);
-            reportClient(0, ask, "Mat report:" + ask.get(0).sysTime + "," + ask.get(0).stockNo+","+
-                ask.get(0).BS+","+ask.get(0).qty+","+ask.get(0).price);
-            bid.remove(0);
-            ask.remove(0);
+            reportClient(0, bid, "Mat report:" + mat.get(mat.size()-1).sysTime + "," + mat.get(mat.size()-1).stockNo+","+
+                bid.get(0).BS+","+mat.get(mat.size()-1).qty+","+mat.get(mat.size()-1).price);
+            reportClient(0, ask, "Mat report:" + mat.get(mat.size()-1).sysTime + "," + mat.get(mat.size()-1).stockNo+","+
+                ask.get(0).BS+","+mat.get(mat.size()-1).qty+","+mat.get(mat.size()-1).price);
+            removeLim(bid, 0);
+            removeLim(ask, 0);
+            return true;
         }
 
-        // //Buy
-        // if (ord.BS.equals("B")){
-        //     if (ord.price >= lim.get(0).price){
-        //         ord.price = lim.get(0).price;
-        //         ord.sysTime = getSysTime();
-        //         //ord.ipAdr += lim.get(0).ipAdr;
-        //         mat.add(ord);
-        //         --lim.get(0).qty;
-        //         if (lim.get(0).qty == 0){
-        //             lim.removeMatNode(0, mat);
-        //         }
-        //         reportClient(0, mat, "Mat report:" + mat.get(mat.size()-1).sysTime + "," + mat.get(mat.size()-1).stockNo+","+
-        //                 mat.get(mat.size()-1).BS+","+mat.get(mat.size()-1).qty);
-        //         System.out.print("match:" + mat.get(mat.size()-1).BS + mat.get(mat.size()-1).price + " " + mat.get(mat.size()-1).ipAdr);
-        //         //System.out.println("trade:" + match);
-        //         return true;
-        //     }
-        // }
-
-        // //Sell
-        // if (ord.BS.equals("S")){
-        //     if (ord.price <= lim.get(0).price){
-        //         ord.price = lim.get(0).price;
-        //         ord.sysTime = getSysTime();
-        //         //ord.ipAdr += lim.get(0).ipAdr;
-        //         mat.add(ord);
-        //         --lim.get(0).qty;
-        //         if (lim.get(0).qty == 0){
-        //             lim.removeMatNode(0, mat);
-        //         }
-        //         System.out.println("match:" + mat.get(mat.size()-1).BS + mat.get(mat.size()-1).price + " " + mat.get(mat.size()-1).ipAdr);
-        //         //System.out.println("trade:" + match);
-        //         return true;
-        //     }
-        // }
-        // //System.out.print("match:" + match);
         return false;
     }
 
@@ -276,7 +278,11 @@ public class MatchServer {
             for(int i = 0; i < list.size(); i++){
                 if (list.get(i).getRemoteAddress().toString().contains(lim.get(n).ipAdr)){
                     System.out.println("Send To client:" + msg + lim.get(n).ipAdr);
-                    startWrite(list.get(i), msg);
+                    try{
+                        startWrite(list.get(i), msg + "\n");
+                    }catch(Exception ex){
+                        //lim.remove(n);
+                    }
                 }
             }
         }catch(Exception ex){
@@ -284,10 +290,47 @@ public class MatchServer {
         }
     }
 
-    // private void removeNode(int n, ArrayList<order> lim){
+    public String getAllOrder(ArrayList<order> bid, ArrayList<order> ask){
 
-    //     lim.remove(n);
-    // }
+        String all = "";
+        if (bid.size() > 0){
+            float price = bid.get(0).price;
+            int qty = bid.get(0).qty;
+            for(int i = 0; i < bid.size(); i++){
+                if (bid.get(i).price != price){
+                    all += bid.get(i).stockNo + ","+ bid.get(i).BS + "," + price + "," + qty + "|";
+                    price = bid.get(i).price;
+                    qty =  bid.get(i).qty;
+                }else if (i != 0){
+                    qty += bid.get(i).qty;
+                }
+
+                if (bid.size() - 1 == i){
+                    all += bid.get(i).stockNo + ","+ bid.get(i).BS + "," + price + "," + qty + "|";
+                }
+            }
+        }
+
+
+        if (ask.size() > 0){
+            float price = ask.get(0).price;
+            int qty = ask.get(0).qty;
+            for(int i = 0; i < ask.size(); i++){
+                if (ask.get(i).price != price){
+                    all += ask.get(i).stockNo + ","+ ask.get(i).BS + "," + price + "," + qty + "|";
+                    price = ask.get(i).price;
+                    qty =  ask.get(i).qty;
+                }else if (i != 0){
+                    qty += ask.get(i).qty;
+                }
+
+                if (ask.size() - 1 == i){
+                    all += ask.get(i).stockNo + ","+ ask.get(i).BS + "," + price + "," + qty + "|";
+                }
+            }
+        }
+        return all;
+    }
 
     private void startRead( AsynchronousSocketChannel sockChannel ) {
         final ByteBuffer buf = ByteBuffer.allocate(2048);
@@ -337,15 +380,20 @@ public class MatchServer {
 
                 if (ord.BS.equals("B")) {
                     limit(ord, bid);
-                    trade(bid, ask, match);
                 }
                 if (ord.BS.equals("S")) {
                     limit(ord, ask);
-                    trade(bid, ask, match);
                 }
+                if (trade(bid, ask, match) == true){
+                    startWrite(clientChannel, "Mat:" + match.get(match.size()-1).sysTime + "," + match.get(match.size()-1).stockNo+","+
+                    match.get(match.size()-1).BS+","+match.get(match.size()-1).qty+","+match.get(match.size()-1).price+"\n");
+                }
+
+                //send to all 
+                startWrite(clientChannel, "Ord:" + getAllOrder(bid, ask)+"\n");
+                
+                //bid size and ask size
                 System.out.println("Blist:" + bid.size() + " Alist:" + ask.size());
-                //Send To 
-                //startWrite(clientChannel, msg);
 
                 // echo the message
 //------------------>                //startWrite( channel, buf );

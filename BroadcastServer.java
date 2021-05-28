@@ -32,6 +32,9 @@ public class BroadcastServer {
     AsynchronousServerSocketChannel serverSock;// =  AsynchronousServerSocketChannel.open().bind(sockAddr);
     AsynchronousServerSocketChannel serverSockMain;
 
+    //server msg
+    String msg = "";
+
     public BroadcastServer( String bindAddr, int bindPort ) throws IOException {
         serverSock =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, bindPort));
         serverSockMain =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, 19029));   
@@ -50,6 +53,9 @@ public class BroadcastServer {
 
                     //Add To Client List
                     list.add(list.size(), sockChannel);
+
+                    //send msg when client connect
+                    startWrite(sockChannel, msg);
 
                 }catch(IOException e) {
                     e.printStackTrace();
@@ -73,6 +79,9 @@ public class BroadcastServer {
             public void completed(AsynchronousSocketChannel sockChannel, AsynchronousServerSocketChannel serverSockMain ) {
                 //a connection is accepted, start to accept next connection
                 serverSockMain.accept( serverSockMain, this );
+
+                //clear msg
+                msg = "";
 
                 //Print IP Address
                 try{
@@ -134,7 +143,7 @@ public class BroadcastServer {
                 if (buf.limit() == 0) return;
 
                 //Print Message
-                String msg = getString(buf);
+                msg = getString(buf);
 
                 //time
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
@@ -143,10 +152,14 @@ public class BroadcastServer {
 
 
                 //Send To All Client
-                if (ipAdr.contains("19029")){
-                    for(int i = 0; i < list.size(); i++){
-                        startWrite(list.get(i), msg);
+                try{
+                    if (channel.getLocalAddress().toString().contains("19029")){
+                        for(int i = 0; i < list.size(); i++){
+                            startWrite(list.get(i), msg);
+                        }
                     }
+                }catch(IOException e) {
+                    e.printStackTrace();
                 }
 
                 // echo the message

@@ -49,7 +49,7 @@ public class  ConnectTOBroadcast{
         });
 
         //try to connect to the server side
-        sockChannelToBroadcast.connect( new InetSocketAddress(host, 19029), sockChannelToBroadcast, new CompletionHandler<Void, AsynchronousSocketChannel >() {
+        sockChannelToBroadcast.connect( new InetSocketAddress("127.0.0.1", 19029), sockChannelToBroadcast, new CompletionHandler<Void, AsynchronousSocketChannel >() {
             @Override
             public void completed(Void result, AsynchronousSocketChannel channel ) {
                 //start to read message
@@ -119,7 +119,7 @@ public class  ConnectTOBroadcast{
 
             
             //for( int i = 0; i < 100; i++ ) {
-            new ConnectTOBroadcast( "127.0.0.1", 19030, "echo test 19 ");
+            new ConnectTOBroadcast( "192.168.0.102", 19030, "echo test 19 ");
             //}
             for(;;){
                 Thread.sleep(1000*10);
