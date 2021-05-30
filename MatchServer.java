@@ -428,7 +428,7 @@ public class MatchServer {
     }
     public static void main( String[] args ) {
         try {
-            new MatchServer( "0.0.0.0", 3576 );
+            new MatchServer( "0.0.0.0", 3577 );
 
             for(;;){
                 Thread.sleep(10*1000);

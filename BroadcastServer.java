@@ -195,7 +195,7 @@ public class BroadcastServer {
     }
     public static void main( String[] args ) {
         try {
-            new BroadcastServer( "0.0.0.0", 3575 );
+            new BroadcastServer( "0.0.0.0", 3578 );
             //new BroadcastServer( "0.0.0.0", 19029 );
 
             for(;;){
