@@ -37,7 +37,7 @@ public class BroadcastServer {
 
     public BroadcastServer( String bindAddr, int bindPort ) throws IOException {
         serverSock =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, bindPort));
-        serverSockMain =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, 19029));   
+        serverSockMain =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, 19998));   
 
        //start to accept the connection from client
         serverSock.accept(serverSock, new CompletionHandler<AsynchronousSocketChannel,AsynchronousServerSocketChannel >() {

@@ -69,7 +69,7 @@ public class MatchServer {
 
     public MatchServer( String bindAddr, int bindPort ) throws IOException {
         serverSock =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, bindPort));
-        serverSockMain =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress("0.0.0.0", 19030));   
+        serverSockMain =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress("0.0.0.0", 19997));   
 
        //start to accept the connection from client
         serverSock.accept(serverSock, new CompletionHandler<AsynchronousSocketChannel,AsynchronousServerSocketChannel >() {
