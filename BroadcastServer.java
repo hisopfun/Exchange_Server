@@ -1,5 +1,7 @@
 package asyncsocket;
 
+import java.lang.Object;
+import java.util.concurrent.*;
 import java.util.*;
 import java.io.*;
 import java.util.ArrayList;
@@ -20,10 +22,15 @@ import java.util.Date;
 import java.util.TimeZone;
 import java.util.Calendar;
 import java.text.SimpleDateFormat;
+import java.util.logging.FileHandler;
+import java.util.logging.SimpleFormatter;
 
 public class BroadcastServer {
+    //log
+    Logger logger = null;  
+
     //Client List !!!!!!if client is close, must delete channel
-    public ArrayList<AsynchronousSocketChannel> list = new ArrayList<>();
+    //public ArrayList<AsynchronousSocketChannel> list = new ArrayList<>();
 
     //IP List
     private List<SocketAddress>ips = new ArrayList<SocketAddress>();
@@ -35,9 +42,18 @@ public class BroadcastServer {
     //server msg
     String msg = "";
 
+    //IPAddr
+    String IP = "0.0.0.0";
+    int port = 55555;
+
+
+    // Create and main list of active clients based on their host name / ip address
+    ConcurrentHashMap<String, AsynchronousSocketChannel> activeClients = new ConcurrentHashMap<>();
+
+
     public BroadcastServer( String bindAddr, int bindPort ) throws IOException {
         serverSock =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, bindPort));
-        serverSockMain =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(bindAddr, 19998));   
+        serverSockMain =  AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(IP, port));   
 
        //start to accept the connection from client
         serverSock.accept(serverSock, new CompletionHandler<AsynchronousSocketChannel,AsynchronousServerSocketChannel >() {
@@ -46,20 +62,25 @@ public class BroadcastServer {
                 
                 //a connection is accepted, start to accept next connection
                 serverSock.accept( serverSock, this );
+ 
+                //ipaddress
+                String ipAdr = getChannelIp(sockChannel);
+                System.out.println( ipAdr);
 
-                try{
-                    //Print IP Address
-                    System.out.println( sockChannel.getLocalAddress().toString());
+                //Add To Client List
+                //list.add(list.size(), sockChannel);
 
-                    //Add To Client List
-                    list.add(list.size(), sockChannel);
+                //send msg when client connect
+                startWrite(sockChannel, msg);
 
-                    //send msg when client connect
-                    startWrite(sockChannel, msg);
+                // message received
+                activeClients.put(ipAdr, sockChannel);
 
-                }catch(IOException e) {
-                    e.printStackTrace();
-                }
+                // // broadcast message to all available clients
+                // for(String clientHost : activeClients.keySet()) {
+                //     // get each socket here and send a message to them.
+                // }
+
 
                 //start to read message from the client
                 startRead( sockChannel );
@@ -105,6 +126,9 @@ public class BroadcastServer {
             }
         } );
         
+
+        log_init();
+        log("dog");
     }
 
 
@@ -113,6 +137,21 @@ public class BroadcastServer {
         buf.get(bytes); // read the bytes that were written
         String packet = new String(bytes);
         return packet;
+    }
+
+    private String getChannelIp(AsynchronousSocketChannel channel){
+
+        //ipaddress
+        String ipAdr = "";
+        try{
+
+            //Print IPAdress
+            ipAdr = channel.getRemoteAddress().toString();
+        }catch(IOException e) {
+            e.printStackTrace();
+        }
+
+        return ipAdr;
     }
 
     private void startRead( AsynchronousSocketChannel sockChannel ) {
@@ -128,15 +167,7 @@ public class BroadcastServer {
             public void completed(Integer result, AsynchronousSocketChannel channel  ) {
 
                 //ipaddress
-                String ipAdr = "";
-                try{
-
-                    //Print IPAdress
-                    ipAdr = channel.getRemoteAddress().toString();
-                    System.out.println(ipAdr);
-                }catch(IOException e) {
-                    e.printStackTrace();
-                }
+                String ipAdr = getChannelIp(channel);
 
                 buf.flip();
                 //if client is close ,return
@@ -153,10 +184,13 @@ public class BroadcastServer {
 
                 //Send To All Client
                 try{
-                    if (channel.getLocalAddress().toString().contains("19029")){
-                        for(int i = 0; i < list.size(); i++){
-                            startWrite(list.get(i), msg);
-                        }
+                    if (channel.getLocalAddress().toString().contains(String.valueOf(port))){
+                        //for(int i = 0; i < list.size(); i++){
+                        //    startWrite(list.get(i), msg);
+                        //}
+                        for(ConcurrentHashMap.Entry<String, AsynchronousSocketChannel> entry : activeClients.entrySet()){
+                            startWrite(entry.getValue(), msg);
+                        }          
                     }
                 }catch(IOException e) {
                     e.printStackTrace();
@@ -176,25 +210,77 @@ public class BroadcastServer {
         });
     }
         
+
+
     private void startWrite( final AsynchronousSocketChannel sockChannel, final String message) {
         ByteBuffer buf = ByteBuffer.allocate(2048);
         buf.put(message.getBytes());
         buf.flip();
-        sockChannel.write(buf, sockChannel, new CompletionHandler<Integer, AsynchronousSocketChannel >() {
-            @Override
-            public void completed(Integer result, AsynchronousSocketChannel channel ) {
-                //after message written
-                //NOTHING TO DO
-            }
 
-            @Override
-            public void failed(Throwable exc, AsynchronousSocketChannel channel) {
-                System.out.println( "Fail to write the message to server");
-            }
-        });
+        try{
+            sockChannel.write(buf, sockChannel, new CompletionHandler<Integer, AsynchronousSocketChannel >() {
+                @Override
+                public void completed(Integer result, AsynchronousSocketChannel channel ) {
+                    //after message written
+                    //NOTHING TO DO
+                }
+
+                @Override
+                public void failed(Throwable exc, AsynchronousSocketChannel channel) {
+                    System.out.println( "Fail to write the message to server");
+
+                    //ipaddress
+                    String ipAdr = getChannelIp(channel);
+                    System.out.println( "remove:"+ ipAdr);
+                    activeClients.remove(ipAdr);
+                }
+            });
+        }catch(java.nio.channels.WritePendingException e){
+            System.out.println(e.getMessage());
+            log("Exception:" + e.getMessage());
+        }
+
     }
+
+    public void log_init() {  
+
+        logger = Logger.getLogger("MyLog");  
+        FileHandler fh;  
+
+        try {  
+
+            // This block configure the logger with handler and formatter  
+            fh = new FileHandler("MyLogFile.log", true);  
+            logger.addHandler(fh);
+            SimpleFormatter formatter = new SimpleFormatter();  
+            fh.setFormatter(formatter);  
+
+            // the following statement is used to log any messages  
+            //logger.info("My first log");  
+
+        } catch (SecurityException e) {  
+            e.printStackTrace();  
+        } catch (IOException e) {  
+            e.printStackTrace();  
+        }  
+
+        //logger.info("Hi How r u?");  
+
+    }
+
+    public void log(String msg) {  
+
+        try {  
+            logger.info(msg); 
+        } catch (SecurityException e) {  
+            e.printStackTrace();  
+        } 
+
+    }
+
     public static void main( String[] args ) {
         try {
+
             new BroadcastServer( "0.0.0.0", 3578 );
             //new BroadcastServer( "0.0.0.0", 19029 );
 
@@ -206,3 +292,4 @@ public class BroadcastServer {
         }
     } 
 }
+
