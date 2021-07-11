@@ -1,5 +1,6 @@
 package asyncsocket;
 
+import java.io.FileWriter;   
 import java.lang.Object;
 import java.util.concurrent.*;
 import java.util.*;
@@ -24,13 +25,14 @@ import java.util.Calendar;
 import java.text.SimpleDateFormat;
 import java.util.logging.FileHandler;
 import java.util.logging.SimpleFormatter;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class BroadcastServer {
     //log
-    Logger logger = null;  
-
-    //Client List !!!!!!if client is close, must delete channel
-    //public ArrayList<AsynchronousSocketChannel> list = new ArrayList<>();
+    Logger loggerErr = Logger.getLogger("Err");  
+    Logger loggerIP = Logger.getLogger("IPList");  
 
     //IP List
     private List<SocketAddress>ips = new ArrayList<SocketAddress>();
@@ -46,9 +48,13 @@ public class BroadcastServer {
     String IP = "0.0.0.0";
     int port = 55555;
 
+    class Client{
+        ArrayBlockingQueue<String> msgQueue = new ArrayBlockingQueue<String>(1024);
+        AsynchronousSocketChannel channel;
+    }
 
     // Create and main list of active clients based on their host name / ip address
-    ConcurrentHashMap<String, AsynchronousSocketChannel> activeClients = new ConcurrentHashMap<>();
+    ConcurrentHashMap<String, Client> activeClients = new ConcurrentHashMap<>();
 
 
     public BroadcastServer( String bindAddr, int bindPort ) throws IOException {
@@ -67,20 +73,9 @@ public class BroadcastServer {
                 String ipAdr = getChannelIp(sockChannel);
                 System.out.println( ipAdr);
 
-                //Add To Client List
-                //list.add(list.size(), sockChannel);
-
                 //send msg when client connect
-                startWrite(sockChannel, msg);
-
-                // message received
-                activeClients.put(ipAdr, sockChannel);
-
-                // // broadcast message to all available clients
-                // for(String clientHost : activeClients.keySet()) {
-                //     // get each socket here and send a message to them.
-                // }
-
+                //startWrite(sockChannel, msg);
+                log(loggerIP, ipAdr + " accept");
 
                 //start to read message from the client
                 startRead( sockChannel );
@@ -112,9 +107,6 @@ public class BroadcastServer {
                     e.printStackTrace();
                 }
 
-                //Add To Client List
-                //list.add(list.size(), sockChannel);
-
                 //start to read message from the client
                 startRead( sockChannel );
                 
@@ -127,8 +119,8 @@ public class BroadcastServer {
         } );
         
 
-        log_init();
-        log("dog");
+        log_init(loggerErr, "Err");
+        log_init(loggerIP, "IPList");
     }
 
 
@@ -155,7 +147,7 @@ public class BroadcastServer {
     }
 
     private void startRead( AsynchronousSocketChannel sockChannel ) {
-        final ByteBuffer buf = ByteBuffer.allocate(2048);
+        final ByteBuffer buf = ByteBuffer.allocate(1024);
         
         //read message from client
         sockChannel.read( buf, sockChannel, new CompletionHandler<Integer, AsynchronousSocketChannel >() {
@@ -176,22 +168,33 @@ public class BroadcastServer {
                 //Print Message
                 msg = getString(buf);
 
+    
                 //time
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
                 sdf.setTimeZone(TimeZone.getTimeZone("Asia/Taipei"));
-                System.out.println(sdf.format(new Date()) + " " + buf.limit() + " client: " + ipAdr + " " + msg + "   " );
+                System.out.println(sdf.format(new Date()) + " " + buf.limit() + " client: " + ipAdr + " \'" + msg + "\'   " );
 
 
                 //Send To All Client
                 try{
                     if (channel.getLocalAddress().toString().contains(String.valueOf(port))){
-                        //for(int i = 0; i < list.size(); i++){
-                        //    startWrite(list.get(i), msg);
-                        //}
-                        for(ConcurrentHashMap.Entry<String, AsynchronousSocketChannel> entry : activeClients.entrySet()){
-                            startWrite(entry.getValue(), msg);
+                        for(ConcurrentHashMap.Entry<String, Client> entry : activeClients.entrySet()){
+
+                            //send queue msg
+                            entry.getValue().msgQueue.offer(msg);
+                            while(entry.getValue().msgQueue.size() > 0){
+                                startWrite(entry.getValue().channel, entry.getValue().msgQueue.poll());
+                            }
                         }          
+                    }else if (msg.contains("getOP")){
+                        // add map
+                        // message received
+                        activeClients.put(ipAdr, new Client());
+                        activeClients.get(ipAdr).channel = channel;
+                        System.out.println(sdf.format(new Date()) + ipAdr + " add to map:" + "," + msg);
+                        log(loggerIP, ipAdr + " add to map:" + "," + msg);
                     }
+
                 }catch(IOException e) {
                     e.printStackTrace();
                 }
@@ -213,7 +216,7 @@ public class BroadcastServer {
 
 
     private void startWrite( final AsynchronousSocketChannel sockChannel, final String message) {
-        ByteBuffer buf = ByteBuffer.allocate(2048);
+        ByteBuffer buf = ByteBuffer.allocate(1024);
         buf.put(message.getBytes());
         buf.flip();
 
@@ -233,30 +236,31 @@ public class BroadcastServer {
                     String ipAdr = getChannelIp(channel);
                     System.out.println( "remove:"+ ipAdr);
                     activeClients.remove(ipAdr);
+                    log(loggerIP, ipAdr + " remove map");
                 }
             });
         }catch(java.nio.channels.WritePendingException e){
-            System.out.println(e.getMessage());
-            log("Exception:" + e.getMessage());
-        }
+            //ipaddress
 
+            String ipAdr = getChannelIp(sockChannel);
+            activeClients.get(ipAdr).msgQueue.offer(message);
+            System.out.println(e.getMessage());
+            log(loggerErr, ipAdr + "Exception:" + e.getMessage());
+        }
     }
 
-    public void log_init() {  
+    public void log_init(Logger logger, String fileName) {  
 
-        logger = Logger.getLogger("MyLog");  
+        logger = Logger.getLogger(fileName);  
         FileHandler fh;  
 
         try {  
 
             // This block configure the logger with handler and formatter  
-            fh = new FileHandler("MyLogFile.log", true);  
+            fh = new FileHandler(fileName + ".log", true);  
             logger.addHandler(fh);
             SimpleFormatter formatter = new SimpleFormatter();  
             fh.setFormatter(formatter);  
-
-            // the following statement is used to log any messages  
-            //logger.info("My first log");  
 
         } catch (SecurityException e) {  
             e.printStackTrace();  
@@ -264,11 +268,9 @@ public class BroadcastServer {
             e.printStackTrace();  
         }  
 
-        //logger.info("Hi How r u?");  
-
     }
 
-    public void log(String msg) {  
+    public void log(Logger logger, String msg) {  
 
         try {  
             logger.info(msg); 
@@ -277,6 +279,8 @@ public class BroadcastServer {
         } 
 
     }
+
+
 
     public static void main( String[] args ) {
         try {
