@@ -3272,3 +3272,31 @@ Jul 09, 2021 10:48:04 PM asyncsocket.BroadcastServer log
 INFO: /203.204.5.39:57858 add to map:,{"MachinName":"DESKTOP-DU47M86","UserName":"DESKTOP-DU47M86\\lix34","OSVersion":"6.2.9200.0","ProcessorCount":"4","TotalPhysicalMemory":"16","Bit":"64-Bit, ","LoaclPrivateIP":"192.168.116.1","ID":"","Password":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","Action":"getOP"}
 Jul 10, 2021 9:08:31 AM asyncsocket.BroadcastServer log
 INFO: /203.204.5.39:57858 remove map
+Jul 12, 2021 9:00:00 AM asyncsocket.BroadcastServer log
+INFO: /203.204.5.39:49838 accept
+Jul 12, 2021 9:00:00 AM asyncsocket.BroadcastServer log
+INFO: /203.204.5.39:49838 add to map:,{"MachinName":"DESKTOP-E79BK5S","UserName":"DESKTOP-E79BK5S\\Lix","OSVersion":"6.2.9200.0","ProcessorCount":"4","TotalPhysicalMemory":"4","Bit":"64-Bit, ","LoaclPrivateIP":"192.168.44.1","ID":"","Password":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","Action":"getOP"}
+Jul 12, 2021 9:01:18 AM asyncsocket.BroadcastServer log
+INFO: /203.204.5.39:49838 remove map
+Jul 12, 2021 9:02:55 AM asyncsocket.BroadcastServer log
+INFO: /203.204.5.39:49953 accept
+Jul 12, 2021 9:02:55 AM asyncsocket.BroadcastServer log
+INFO: /203.204.5.39:49953 add to map:,{"MachinName":"DESKTOP-E79BK5S","UserName":"DESKTOP-E79BK5S\\Lix","OSVersion":"6.2.9200.0","ProcessorCount":"4","TotalPhysicalMemory":"4","Bit":"64-Bit, ","LoaclPrivateIP":"192.168.44.1","ID":"","Password":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","Action":"getOP"}
+Jul 12, 2021 9:08:42 AM asyncsocket.BroadcastServer log
+INFO: /203.204.5.39:49953 remove map
+Jul 12, 2021 9:08:42 AM asyncsocket.BroadcastServer log
+INFO: /203.204.5.39:49953 remove map
+Jul 12, 2021 9:08:42 AM asyncsocket.BroadcastServer log
+INFO: /203.204.5.39:49953 remove map
+Jul 12, 2021 9:08:42 AM asyncsocket.BroadcastServer log
+INFO: /203.204.5.39:49953 remove map
+Jul 12, 2021 9:08:42 AM asyncsocket.BroadcastServer log
+INFO: /203.204.5.39:49953 remove map
+Jul 12, 2021 9:08:42 AM asyncsocket.BroadcastServer log
+INFO: /203.204.5.39:49953 remove map
+Jul 14, 2021 1:54:15 AM asyncsocket.BroadcastServer log
+INFO: /193.32.164.18:65169 accept
+Jul 20, 2021 7:42:05 PM asyncsocket.BroadcastServer log
+INFO: /91.241.19.230:64249 accept
+Jul 20, 2021 11:24:23 PM asyncsocket.BroadcastServer log
+INFO: /194.61.25.4:64507 accept
